@@ -6,11 +6,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
-	_ "io/ioutil"
 	"log"
 	"net/http"
-	_ "os"
-	"strconv"
 	"strings"
 )
 
@@ -27,28 +24,36 @@ type Result struct {
 	Connected5G    string `json:"connected_5g"`
 }
 
-type Sample struct {
-	Id int `json:"id"`
-}
-
 func main() {
 	e := echo.New()
 
 	// Set Logging
 	e.Use(middleware.Logger())
+	// Set Error Handler
+	// e.SetHTTPErrorHandler(jsonErrorHandler)
 
 	// Routing
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
 	})
-	e.GET("/sample/:id", func(c echo.Context) error {
-		id, _ := strconv.Atoi(c.Param("id"))
-		return c.JSON(http.StatusOK, getSample(id))
-	})
 	e.POST("/wlx/:ip", func(c echo.Context) error {
 		user := c.FormValue("user")
 		pass := c.FormValue("pass")
-		return c.JSON(http.StatusOK, getResults(c.Param("ip"), user, pass))
+		resp, code := getResult(c.Param("ip"), user, pass)
+
+		if resp == nil {
+			switch code {
+			case 401:
+				return c.JSON(http.StatusUnauthorized, "Unauthorized Error.")
+			case 400:
+				return c.JSON(http.StatusBadRequest, "Bad Request Error.")
+			case 500:
+				return c.JSON(http.StatusInternalServerError, "Internal Server Error.")
+			default:
+				return c.JSON(http.StatusNotImplemented, "Unknown Error.")
+			}
+		}
+		return c.JSON(http.StatusOK, resp)
 	})
 
 	// Start Server
@@ -60,15 +65,9 @@ func basicAuth(username, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-func getResults(ip_address string, user string, pass string) *Results {
-	// FromFile
-	// fileInfos, _ := ioutil.ReadFile("/Users/kappa/Documents/sandbox/nw/wlx/manage-system.html")
-	// stringReader := strings.NewReader(string(fileInfos))
-	// doc, err := goquery.NewDocumentFromReader(stringReader)
-
+func getResult(ip_address string, user string, pass string) (*Results, int) {
 	// リクエストを生成する
 	url := "http://" + ip_address + "/manage-system.html"
-	fmt.Println(url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Println(err)
@@ -77,12 +76,18 @@ func getResults(ip_address string, user string, pass string) *Results {
 	req.Header.Add("Authorization", "Basic "+basicAuth(user, pass))
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatalf("Unable to connect server.\n")
+		log.Printf("Unable to connect server.\n")
+		return nil, 0
 	} else if res.StatusCode != 200 {
-		log.Fatalf("Unable to get url : http status %d\n", res.StatusCode)
+		log.Printf("Unable to get url : http status %d\n", res.StatusCode)
+		return nil, res.StatusCode
 	}
 	defer res.Body.Close()
 
+	return parseResult(ip_address, res), 200
+}
+
+func parseResult(ip_address string, res *http.Response) *Results {
 	// HTTP レスポンスを解析する
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
@@ -102,6 +107,7 @@ func getResults(ip_address string, user string, pass string) *Results {
 		})
 		table = append(table, rows)
 	})
+	// 以下, 泥臭いことをやっている
 	product_info := table[0]
 	system_info := table[1]
 	wireless_info := table[2]
@@ -146,12 +152,6 @@ func getResults(ip_address string, user string, pass string) *Results {
 	rj := &Results{
 		Results: rs,
 	}
+
 	return rj
 }
-
-func getSample(id int) *Sample {
-	s := &Sample{
-		Id: id,
-	}
-	return s
- -
