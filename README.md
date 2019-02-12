@@ -26,6 +26,8 @@ WLX202 の管理 Web コンソールにアクセス可能な端末でサーバ�
 ./wlx &
 ```
 
+### 機器情報の取得
+
 デフォルトでサーバーは localhost の 20200 番で Listen するので, 以下のようにアクセスすることで, 対象の機器の情報を取得することが出来ます.
 
 ```sh
@@ -53,12 +55,27 @@ curl -s -XPOST http://localhost:20200/wlx/${対象機器の IP アドレス} \
 
 以下のような内容になっています.
 
-* ip_address は WLX202 本体の機器 IP アドレス
-* machine_name は機器の名称
-* cpu_utilization は CPU の稼働率
-* memory_usage はメモリの使用率
-* connected は 2.4GHz 帯域に接続しているクライアント数
-* connected_5g は 5GHz 帯域に接続しているクライアント数
+* `ip_address` は WLX202 本体の機器 IP アドレス
+* `machine_name` は機器の名称
+* `cpu_utilization` は CPU の稼働率
+* `memory_usage` はメモリの使用率
+* `connected` は 2.4GHz 帯域に接続しているクライアント数
+* `connected_5g` は 5GHz 帯域に接続しているクライアント数
+
+### Dockernize
+
+Docker 化することで, wlx プロセスをバックグラウンド起動させるよりも手軽にサービス化出来ると思います.
+
+```sh
+make image && make run
+```
+
+上記で Docker イメージを生成してコンテナを起動します.
+
+```sh
+CONTAINER ID        IMAGE               COMMAND                CREATED             STATUS              PORTS                      NAMES
+e5e93526e562        wlx                 "/usr/local/bin/wlx"   3 seconds ago       Up 1 second         0.0.0.0:20200->20200/tcp   wlx
+```
 
 ## なんで作ったのか
 
