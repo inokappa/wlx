@@ -2,7 +2,7 @@
 
 ## なにこれ
 
-YAMAHA の無線 LAN アクセスポイント [WLX202](https://network.yamaha.com/products/wireless_lan/wlx202/index) の一部のシステム情報を REST API で返却するシンプルなサーバーです.
+YAMAHA の無線 LAN アクセスポイント [WLX202](https://network.yamaha.com/products/wireless_lan/wlx202/index) の一部のシステム情報を JSON で返却するシンプルなサーバーです.
 
 以下, 本サーバーで取得可能な情報です.
 
